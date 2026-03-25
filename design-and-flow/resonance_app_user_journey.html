@@ -1,0 +1,215 @@
+
+<div id="app" style="max-width: 375px; margin: 0 auto; padding: 1rem 0;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span id="step-label" style="font-size: 13px; color: var(--color-text-secondary);">Step 1 of 6</span>
+    </div>
+    <div style="display: flex; gap: 6px;" id="dots"></div>
+  </div>
+
+  <div id="screen" style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; min-height: 480px; display: flex; flex-direction: column;"></div>
+
+  <div style="display: flex; gap: 12px; margin-top: 1rem;">
+    <button id="prev-btn" onclick="navigate(-1)" style="flex: 1; opacity: 0.4; pointer-events: none;">Back</button>
+    <button id="next-btn" onclick="navigate(1)" style="flex: 2;">Next</button>
+  </div>
+</div>
+
+<script>
+let step = 0;
+const screens = [
+  {
+    title: "Upload your YouTube data",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span style="font-size: 18px; font-weight: 500;">Your watch history</span>
+        </div>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1.25rem;">Export from Google Takeout. We only read channel and topic data — never specific video titles.</p>
+        <div style="border: 2px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 2rem 1rem; text-align: center; margin-bottom: 1rem;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.5" style="margin: 0 auto 8px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M3 15l4-4a2 2 0 012.8 0L15 16"/></svg>
+          <p style="font-size: 14px; font-weight: 500; margin: 0 0 4px;">Drop your Takeout file here</p>
+          <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0;">watch-history.json from Google Takeout</p>
+        </div>
+        <div style="background: var(--color-background-info); border-radius: var(--border-radius-md); padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-info)" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <p style="font-size: 12px; color: var(--color-text-info); margin: 0; line-height: 1.5;">Your data is processed locally. We store your interest fingerprint, not your raw history.</p>
+        </div>
+      </div>`
+  },
+  {
+    title: "Processing your data",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <span style="font-size: 18px; font-weight: 500; display: block; margin-bottom: 6px;">Analyzing your world</span>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1.5rem;">We're mapping 14 months of watch history into your interest fingerprint.</p>
+        ${[
+          { label: "Channels mapped", val: "342", done: true },
+          { label: "Topics clustered", val: "28", done: true },
+          { label: "Engagement depth scored", val: "...", done: false },
+          { label: "Neighborhoods identified", val: "...", done: false }
+        ].map(s => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--color-border-tertiary);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; ${s.done ? 'background: var(--color-background-success);' : 'border: 2px solid var(--color-border-tertiary);'}">
+                ${s.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-success)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+              </div>
+              <span style="font-size: 14px;">${s.label}</span>
+            </div>
+            <span style="font-size: 14px; font-weight: 500; color: ${s.done ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'};">${s.val}</span>
+          </div>
+        `).join('')}
+        <div style="margin-top: 1.25rem; background: var(--color-background-secondary); border-radius: var(--border-radius-md); height: 6px; overflow: hidden;">
+          <div style="width: 55%; height: 100%; background: #534AB7; border-radius: var(--border-radius-md); transition: width 0.3s;"></div>
+        </div>
+        <p style="font-size: 12px; color: var(--color-text-secondary); text-align: center; margin: 8px 0 0;">Usually takes about 30 seconds</p>
+      </div>`
+  },
+  {
+    title: "Your fingerprint",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <span style="font-size: 18px; font-weight: 500; display: block; margin-bottom: 4px;">Your intellectual fingerprint</span>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1.25rem;">Based on 14 months of watch history across 342 channels.</p>
+        ${[
+          { name: "Neuroscience & self-optimization", pct: 34, color: "#534AB7", bg: "#EEEDFE", tc: "#3C3489" },
+          { name: "Philosophy & meaning-making", pct: 24, color: "#0F6E56", bg: "#E1F5EE", tc: "#085041" },
+          { name: "Startups & building", pct: 19, color: "#185FA5", bg: "#E6F1FB", tc: "#0C447C" },
+          { name: "Fitness & body", pct: 14, color: "#D85A30", bg: "#FAECE7", tc: "#712B13" },
+          { name: "Creative & music", pct: 9, color: "#854F0B", bg: "#FAEEDA", tc: "#633806" }
+        ].map(c => `
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-size: 13px; font-weight: 500;">${c.name}</span>
+              <span style="font-size: 13px; color: var(--color-text-secondary);">${c.pct}%</span>
+            </div>
+            <div style="height: 8px; background: var(--color-background-secondary); border-radius: 4px; overflow: hidden;">
+              <div style="width: ${c.pct}%; height: 100%; background: ${c.color}; border-radius: 4px;"></div>
+            </div>
+          </div>
+        `).join('')}
+        <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px; margin-top: 1rem;">
+          <p style="font-size: 12px; font-weight: 500; margin: 0 0 4px;">Your archetype</p>
+          <p style="font-size: 15px; font-weight: 500; color: #534AB7; margin: 0 0 4px;">The philosopher-builder</p>
+          <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0; line-height: 1.5;">You go deep on how the mind works, then apply it. You think about systems — biological and entrepreneurial — with unusual range.</p>
+        </div>
+      </div>`
+  },
+  {
+    title: "Your neighborhoods",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <span style="font-size: 18px; font-weight: 500; display: block; margin-bottom: 4px;">Your intellectual neighborhoods</span>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1rem;">The corners of YouTube where you'd find your people.</p>
+        ${[
+          { name: "The evidence-based optimizers", creators: "Huberman, Attia, Galpin", members: "1,240 in Bangalore", color: "#EEEDFE", accent: "#534AB7", tc: "#3C3489" },
+          { name: "The meaning-seekers", creators: "Chris Williamson, Lex Fridman, After Skool", members: "890 in Bangalore", color: "#E1F5EE", accent: "#0F6E56", tc: "#085041" },
+          { name: "The indie builders", creators: "Y Combinator, Pieter Levels, Dalton+Michael", members: "2,100 in Bangalore", color: "#E6F1FB", accent: "#185FA5", tc: "#0C447C" }
+        ].map(n => `
+          <div style="background: ${n.color}; border-radius: var(--border-radius-md); padding: 14px; margin-bottom: 10px;">
+            <p style="font-size: 14px; font-weight: 500; margin: 0 0 2px; color: ${n.tc};">${n.name}</p>
+            <p style="font-size: 12px; color: ${n.accent}; margin: 0 0 8px;">${n.creators}</p>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="display: flex;">
+                ${[0,1,2].map(i => `<div style="width: 22px; height: 22px; border-radius: 50%; background: ${n.accent}; border: 2px solid ${n.color}; margin-left: ${i > 0 ? '-6px' : '0'}; display: flex; align-items: center; justify-content: center; font-size: 9px; color: ${n.color}; font-weight: 500;">${['A','R','S'][i]}</div>`).join('')}
+              </div>
+              <span style="font-size: 11px; color: ${n.accent};">${n.members}</span>
+            </div>
+          </div>
+        `).join('')}
+        <p style="font-size: 12px; color: var(--color-text-secondary); text-align: center; margin: 8px 0 0;">Neighborhoods update as your consumption evolves</p>
+      </div>`
+  },
+  {
+    title: "Match feed",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <span style="font-size: 18px; font-weight: 500; display: block; margin-bottom: 4px;">People in your neighborhoods</span>
+        <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0: 1rem;">Sorted by constellation overlap, not just shared follows.</p>
+        <div style="display: flex; gap: 8px; margin: 12px 0;">
+          <span style="font-size: 12px; padding: 4px 12px; border-radius: 20px; background: #534AB7; color: #EEEDFE;">All</span>
+          <span style="font-size: 12px; padding: 4px 12px; border-radius: 20px; background: var(--color-background-secondary); color: var(--color-text-secondary);">Optimizers</span>
+          <span style="font-size: 12px; padding: 4px 12px; border-radius: 20px; background: var(--color-background-secondary); color: var(--color-text-secondary);">Meaning</span>
+          <span style="font-size: 12px; padding: 4px 12px; border-radius: 20px; background: var(--color-background-secondary); color: var(--color-text-secondary);">Builders</span>
+        </div>
+        ${[
+          { init: "AP", name: "Ananya P.", overlap: "91%", shared: "Huberman, Williamson, Attia + 12 more", spark: "You're both deep into Chris Williamson's conversations on meaning & masculinity, and both watch Huberman's sleep series repeatedly.", hood: "Optimizers + Meaning-seekers", olap_color: "#534AB7", olap_bg: "#EEEDFE" },
+          { init: "RK", name: "Rhea K.", overlap: "84%", shared: "Lex Fridman, After Skool, Veritasium + 8 more", spark: "You both watch long-form Lex Fridman interviews start to finish — not clips. You both also discovered Joscha Bach through Lex.", hood: "Meaning-seekers + Builders", olap_color: "#0F6E56", olap_bg: "#E1F5EE" }
+        ].map(m => `
+          <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: ${m.olap_bg}; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 14px; color: ${m.olap_color};">${m.init}</div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 15px; font-weight: 500;">${m.name}</span>
+                  <span style="font-size: 12px; font-weight: 500; color: ${m.olap_color}; background: ${m.olap_bg}; padding: 2px 8px; border-radius: 10px;">${m.overlap}</span>
+                </div>
+                <span style="font-size: 12px; color: var(--color-text-secondary);">${m.hood}</span>
+              </div>
+            </div>
+            <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; margin-bottom: 8px;">
+              <p style="font-size: 11px; font-weight: 500; color: var(--color-text-secondary); margin: 0 0 3px; text-transform: uppercase; letter-spacing: 0.5px;">Conversation spark</p>
+              <p style="font-size: 13px; margin: 0; line-height: 1.5; color: var(--color-text-primary);">${m.spark}</p>
+            </div>
+            <p style="font-size: 11px; color: var(--color-text-secondary); margin: 0;">${m.shared}</p>
+          </div>
+        `).join('')}
+      </div>`
+  },
+  {
+    title: "Start a conversation",
+    render: () => `
+      <div style="padding: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 0.5px solid var(--color-border-tertiary);">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #EEEDFE; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 13px; color: #534AB7;">AP</div>
+          <div>
+            <p style="font-size: 15px; font-weight: 500; margin: 0;">Ananya P.</p>
+            <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0;">91% constellation overlap</p>
+          </div>
+        </div>
+        <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 16px;">
+          <p style="font-size: 11px; font-weight: 500; color: var(--color-text-secondary); margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.5px;">Your shared ground</p>
+          <p style="font-size: 13px; margin: 0 0 8px; line-height: 1.5;">You both deeply engage with Chris Williamson's conversations on meaning and masculinity, and you both repeatedly return to Huberman's sleep optimization content.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            ${["Huberman Lab", "Modern Wisdom", "Peter Attia", "Lex Fridman", "After Skool"].map(t => `<span style="font-size: 11px; padding: 3px 8px; background: var(--color-background-primary); border-radius: 10px; border: 0.5px solid var(--color-border-tertiary);">${t}</span>`).join('')}
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <p style="font-size: 11px; font-weight: 500; color: var(--color-text-secondary); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;">Suggested openers</p>
+          ${[
+            "I noticed we're both deep into Williamson's recent stuff on meaning — what's your take on his argument that ambition and contentment aren't at odds?",
+            "Fellow Huberman sleep nerd here — have you actually tried the temperature manipulation protocol? Curious if it worked for you."
+          ].map(s => `
+            <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 12px; margin-bottom: 8px; cursor: pointer;">
+              <p style="font-size: 13px; margin: 0; line-height: 1.5;">${s}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 10px 12px;">
+          <span style="flex: 1; font-size: 14px; color: var(--color-text-tertiary);">Or write your own...</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+      </div>`
+  }
+];
+
+function render() {
+  document.getElementById('screen').innerHTML = screens[step].render();
+  document.getElementById('step-label').textContent = `Step ${step + 1} of ${screens.length}`;
+  document.getElementById('dots').innerHTML = screens.map((_, i) => `<div style="width: ${i === step ? '20px' : '6px'}; height: 6px; border-radius: 3px; background: ${i === step ? '#534AB7' : 'var(--color-border-secondary)'}; transition: all 0.2s;"></div>`).join('');
+  const prev = document.getElementById('prev-btn');
+  const next = document.getElementById('next-btn');
+  prev.style.opacity = step === 0 ? '0.4' : '1';
+  prev.style.pointerEvents = step === 0 ? 'none' : 'auto';
+  next.textContent = step === screens.length - 1 ? 'Done' : 'Next';
+}
+
+function navigate(dir) {
+  if (step === screens.length - 1 && dir === 1) return;
+  step = Math.max(0, Math.min(screens.length - 1, step + dir));
+  render();
+}
+
+render();
+</script>
