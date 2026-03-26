@@ -8,5 +8,6 @@ pydantic-settings
 python-multipart
 PyJWT
 anthropic
+aiohttp
 numpy
 sentence-transformers

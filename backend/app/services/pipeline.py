@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from parse_watch_history import parse_watch_history_from_string, classify_shorts
 from app.database import get_conn
+from app.services.fetcher import fetch_missing_videos
+from app.services.tagger import tag_missing_videos
 from app.services.profile import compute_profile
 from app.services.matching import run_matching
 
@@ -96,55 +98,31 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
                 )
 
         # ── Stage 2: Fetch missing metadata ─────────────────
-        await update_job(job_id, "fetching", {"stage": "fetching", "items_processed": 0, "items_total": len(video_watches)})
-
         video_ids = list(video_watches.keys())
-        async with get_conn() as conn:
-            # Find video IDs not yet in our cache
-            cached = await conn.fetch(
-                "SELECT video_id FROM video_metadata WHERE video_id = ANY($1)",
-                video_ids,
-            )
-            not_found = await conn.fetch(
-                "SELECT video_id FROM videos_not_found WHERE video_id = ANY($1)",
-                video_ids,
-            )
-            cached_ids = {r["video_id"] for r in cached} | {r["video_id"] for r in not_found}
-            missing_ids = [vid for vid in video_ids if vid not in cached_ids]
+        await update_job(job_id, "fetching", {"stage": "fetching", "items_processed": 0, "items_total": len(video_ids)})
 
-        if missing_ids:
-            # TODO: Async YouTube API fetching
-            # For now, we track how many need fetching. The sync fetchers
-            # (fetch_video_metadata.py, fetch_channel_metadata.py) will be
-            # ported to async in the next iteration.
-            await update_job(job_id, "fetching", {
-                "stage": "fetching",
-                "items_processed": len(video_ids) - len(missing_ids),
-                "items_total": len(video_ids),
-            })
-        else:
-            await update_job(job_id, "fetching", {
-                "stage": "fetching",
-                "items_processed": len(video_ids),
-                "items_total": len(video_ids),
-            })
+        async def on_fetch_progress(done, total):
+            await update_job(job_id, "fetching", {"stage": "fetching", "items_processed": done, "items_total": total})
+
+        await fetch_missing_videos(video_ids, on_progress=on_fetch_progress)
+
+        await update_job(job_id, "fetching", {
+            "stage": "fetching",
+            "items_processed": len(video_ids),
+            "items_total": len(video_ids),
+        })
 
         # ── Stage 3: Tag untagged videos ────────────────────
         await update_job(job_id, "tagging", {"stage": "tagging", "items_processed": 0, "items_total": len(video_ids)})
 
-        async with get_conn() as conn:
-            tagged = await conn.fetch(
-                "SELECT video_id FROM video_tags WHERE video_id = ANY($1)",
-                video_ids,
-            )
-            tagged_ids = {r["video_id"] for r in tagged}
-            untagged_ids = [vid for vid in video_ids if vid not in tagged_ids]
+        async def on_tag_progress(done, total):
+            await update_job(job_id, "tagging", {"stage": "tagging", "items_processed": done, "items_total": total})
 
-        # TODO: Async LLM tagging
-        # tag_videos.py will be ported to async in the next iteration.
+        await tag_missing_videos(video_ids, on_progress=on_tag_progress)
+
         await update_job(job_id, "tagging", {
             "stage": "tagging",
-            "items_processed": len(video_ids) - len(untagged_ids),
+            "items_processed": len(video_ids),
             "items_total": len(video_ids),
         })
 
