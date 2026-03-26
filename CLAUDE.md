@@ -39,3 +39,11 @@ When the user asks for something to be documented, or when a significant decisio
 - Scope changes or pivots
 
 Always check the current highest ADR number in `docs/` before creating a new one to maintain sequential numbering.
+
+## Decision Transparency
+
+For every key decision (architecture, library choice, schema design, algorithm approach, etc.), explain at the end of the response:
+- What options were considered
+- Why the selected option is the best fit
+
+This helps the user reason about whether the choice is correct. If there is any doubt or ambiguity about the right path, do NOT assume — use AskUserQuestion to let the user guide the direction.

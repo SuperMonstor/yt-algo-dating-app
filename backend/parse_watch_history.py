@@ -25,11 +25,8 @@ SHORTS_HASHTAGS = {"#shorts", "#ytshorts", "#short"}
 SHORT_GAP_THRESHOLD_SECONDS = 90
 
 
-def parse_watch_history(html_path: str = TAKEOUT_HISTORY) -> list[dict]:
-    """Parse watch-history.html into structured entries."""
-    with open(html_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
+def _parse_html_content(content: str) -> list[dict]:
+    """Parse watch-history HTML content into structured entries."""
     raw_entries = re.findall(
         r'<div class="outer-cell.*?</div></div></div>', content, re.DOTALL
     )
@@ -73,6 +70,18 @@ def parse_watch_history(html_path: str = TAKEOUT_HISTORY) -> list[dict]:
         })
 
     return entries
+
+
+def parse_watch_history(html_path: str = TAKEOUT_HISTORY) -> list[dict]:
+    """Parse watch-history.html file into structured entries."""
+    with open(html_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return _parse_html_content(content)
+
+
+def parse_watch_history_from_string(html_content: str) -> list[dict]:
+    """Parse watch-history HTML string into structured entries (for API uploads)."""
+    return _parse_html_content(html_content)
 
 
 def classify_shorts(entries: list[dict]) -> list[dict]:
