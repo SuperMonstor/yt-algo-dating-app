@@ -5,16 +5,22 @@ Run with:
     uvicorn app.main:app --reload
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_pool, close_pool
 from app.auth import get_current_user
 from app.routes import health, upload, status, profile, fingerprint, matches, user
 
-# Dev mode: bypass auth with a fixed user ID
-DEV_USER_ID = UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+# Dev mode: named test users (hardcoded so they survive server restarts)
+DEV_USERS = {
+    "dhruv": UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+    "nauman": UUID("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"),
+    "tarun": UUID("cccccccc-dddd-eeee-ffff-aaaaaaaaaaaa"),
+    "chaitanya": UUID("dddddddd-eeee-ffff-aaaa-bbbbbbbbbbbb"),
+}
+_current_dev_user = "dhruv"
 
 
 @asynccontextmanager
@@ -39,8 +45,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dev mode: bypass auth
-app.dependency_overrides[get_current_user] = lambda: DEV_USER_ID
+# Dev mode: bypass auth, switch user via X-Dev-User header
+def _dev_user():
+    return DEV_USERS.get(_current_dev_user, list(DEV_USERS.values())[0])
+
+app.dependency_overrides[get_current_user] = _dev_user
+
+
+@app.get("/dev/switch/{name}")
+async def switch_dev_user(name: str):
+    """Dev only: switch between named test users."""
+    global _current_dev_user
+    if name not in DEV_USERS:
+        return {"error": "Unknown user", "available": list(DEV_USERS.keys())}
+    _current_dev_user = name
+    return {"switched_to": name, "user_id": str(DEV_USERS[name])}
+
+
+@app.post("/dev/add/{name}")
+async def add_dev_user(name: str):
+    """Dev only: add a new named test user."""
+    if name in DEV_USERS:
+        return {"exists": name, "user_id": str(DEV_USERS[name])}
+    DEV_USERS[name] = uuid4()
+    return {"added": name, "user_id": str(DEV_USERS[name])}
+
+
+@app.get("/dev/users")
+async def list_dev_users():
+    """Dev only: list all named test users."""
+    return {
+        "current": _current_dev_user,
+        "users": {name: str(uid) for name, uid in DEV_USERS.items()},
+    }
+
 
 # Public routes
 app.include_router(health.router)

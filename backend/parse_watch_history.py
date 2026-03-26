@@ -25,11 +25,51 @@ SHORTS_HASHTAGS = {"#shorts", "#ytshorts", "#short"}
 SHORT_GAP_THRESHOLD_SECONDS = 90
 
 
+def _parse_timestamp(text: str):
+    """Try multiple timestamp formats found in Google Takeout exports."""
+    # Format 1: "Jan 15, 2025, 10:30:00 AM GMT+05:30" (US locale)
+    ts_match = re.search(r'(\w{3} \d+, \d{4}, \d+:\d+:\d+ [AP]M)\s*GMT', text)
+    if ts_match:
+        try:
+            return datetime.strptime(ts_match.group(1), "%b %d, %Y, %I:%M:%S %p")
+        except ValueError:
+            pass
+
+    # Format 2: "31 Dec 2025, 13:18:15" (non-US locale, 24h)
+    ts_match = re.search(r'(\d{1,2} \w{3} \d{4}, \d+:\d+:\d+)', text)
+    if ts_match:
+        try:
+            return datetime.strptime(ts_match.group(1), "%d %b %Y, %H:%M:%S")
+        except ValueError:
+            pass
+
+    # Format 3: "2025-01-15T10:30:00" (ISO-ish)
+    ts_match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', text)
+    if ts_match:
+        try:
+            return datetime.strptime(ts_match.group(1), "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            pass
+
+    return None
+
+
 def _parse_html_content(content: str) -> list[dict]:
-    """Parse watch-history HTML content into structured entries."""
+    """Parse watch-history HTML content into structured entries.
+
+    Handles multiple Google Takeout formats:
+    - Older format: <div class="outer-cell ...">
+    - Newer format: <div class="content-cell mdl-cell ...">
+    """
+    # Try both div patterns
     raw_entries = re.findall(
         r'<div class="outer-cell.*?</div></div></div>', content, re.DOTALL
     )
+    if not raw_entries:
+        # Newer takeout format uses content-cell divs
+        raw_entries = re.findall(
+            r'<div class="content-cell[^"]*"[^>]*>.*?</div>', content, re.DOTALL
+        )
 
     entries = []
     for entry in raw_entries:
@@ -47,13 +87,8 @@ def _parse_html_content(content: str) -> list[dict]:
         channel_id = channel_match.group(1) if channel_match else None
         channel_name = channel_match.group(2) if channel_match else None
 
-        ts_match = re.search(r'(\w{3} \d+, \d{4}, \d+:\d+:\d+ [AP]M) GMT([+-]\d+:\d+)', clean)
-        if not ts_match:
-            continue
-
-        try:
-            timestamp = datetime.strptime(ts_match.group(1), "%b %d, %Y, %I:%M:%S %p")
-        except ValueError:
+        timestamp = _parse_timestamp(clean)
+        if not timestamp:
             continue
 
         # Check title for shorts hashtags
