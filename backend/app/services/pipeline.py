@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from parse_watch_history import parse_watch_history_from_string, classify_shorts
 from app.database import get_conn
+from app.services.profile import compute_profile
+from app.services.matching import run_matching
 
 
 async def update_job(job_id: UUID, status: str, progress: dict = None, error: str = None):
@@ -149,25 +151,24 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
         # ── Stage 4: Compute profile ───────────────────────
         await update_job(job_id, "profiling", {"stage": "profiling"})
 
-        # TODO: Profile computation (topic_weights, embedding, etc.)
-        # This will be implemented when we build the profile computation service.
-        # For now, create a placeholder profile so the user flow works.
+        profile_stats = await compute_profile(user_id)
 
-        async with get_conn() as conn:
-            await conn.execute(
-                """
-                INSERT INTO user_profiles (user_id, total_long_form_videos, computed_at)
-                VALUES ($1, $2, now())
-                ON CONFLICT (user_id) DO UPDATE
-                SET total_long_form_videos = $2, computed_at = now()
-                """,
-                user_id,
-                len(video_watches),
-            )
+        await update_job(job_id, "profiling", {
+            "stage": "profiling",
+            "items_processed": 1,
+            "items_total": 1,
+        })
 
         # ── Stage 5: Matching ──────────────────────────────
         await update_job(job_id, "matching", {"stage": "matching"})
-        # TODO: Run matching engine (Stage 1 + Stage 2)
+
+        match_count = await run_matching(user_id)
+
+        await update_job(job_id, "matching", {
+            "stage": "matching",
+            "items_processed": match_count,
+            "items_total": match_count,
+        })
 
         # ── Done ───────────────────────────────────────────
         async with get_conn() as conn:
