@@ -21,7 +21,7 @@ from httpx import AsyncClient, ASGITransport
 import os
 os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5433/ytalgo_test"
 os.environ["SUPABASE_URL"] = "http://localhost"
-os.environ["SUPABASE_JWT_SECRET"] = "test-secret-key-at-least-32-chars-long!!"
+os.environ["SUPABASE_JWK"] = "{}"
 
 from app.main import app
 from app.auth import get_current_user

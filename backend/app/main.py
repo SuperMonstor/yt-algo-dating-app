@@ -5,11 +5,16 @@ Run with:
     uvicorn app.main:app --reload
 """
 
+from uuid import UUID
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_pool, close_pool
+from app.auth import get_current_user
 from app.routes import health, upload, status, profile, fingerprint, matches, user
+
+# Dev mode: bypass auth with a fixed user ID
+DEV_USER_ID = UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 
 
 @asynccontextmanager
@@ -33,6 +38,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Dev mode: bypass auth
+app.dependency_overrides[get_current_user] = lambda: DEV_USER_ID
 
 # Public routes
 app.include_router(health.router)

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Supabase Auth
     supabase_url: str = ""
-    supabase_jwt_secret: str = ""
+    supabase_jwk: str = ""
 
     # YouTube Data API
     youtube_api_key: str = ""

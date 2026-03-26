@@ -8,7 +8,8 @@ Batches 50 IDs per API call (YouTube API limit).
 import re
 import json
 import asyncio
-from typing import Dict, List
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 from uuid import UUID
 
 import aiohttp
@@ -18,6 +19,18 @@ from app.database import get_conn
 
 BATCH_SIZE = 50
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
+
+
+def _parse_iso_date(s: Optional[str]) -> Optional[datetime]:
+    """Parse ISO 8601 date string to datetime, or None."""
+    if not s:
+        return None
+    try:
+        # Handle both "2024-01-15T10:30:00Z" and "2024-01-15T10:30:00.000Z"
+        s = s.replace("Z", "+00:00")
+        return datetime.fromisoformat(s)
+    except (ValueError, TypeError):
+        return None
 
 
 def _parse_duration(iso_duration: str) -> int:
@@ -157,7 +170,7 @@ async def _fetch_video_batch(
             "channel_title": snippet.get("channelTitle"),
             "category_id": snippet.get("categoryId"),
             "tags": snippet.get("tags", []),
-            "published_at": snippet.get("publishedAt"),
+            "published_at": _parse_iso_date(snippet.get("publishedAt")),
             "duration_seconds": _parse_duration(content.get("duration", "")),
             "view_count": int(stats.get("viewCount", 0)),
             "like_count": int(stats.get("likeCount", 0)),
@@ -267,7 +280,7 @@ async def _fetch_channel_batch(
             "description": (snippet.get("description") or "")[:500],
             "custom_url": snippet.get("customUrl"),
             "country": snippet.get("country"),
-            "published_at": snippet.get("publishedAt"),
+            "published_at": _parse_iso_date(snippet.get("publishedAt")),
             "subscriber_count": int(stats.get("subscriberCount", 0)),
             "video_count": int(stats.get("videoCount", 0)),
             "view_count": int(stats.get("viewCount", 0)),
