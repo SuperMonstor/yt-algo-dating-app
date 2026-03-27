@@ -60,7 +60,7 @@ Pure function, zero external dependencies. Parse Google Takeout's `watch-history
 
 ---
 
-## Step 2: YouTube API Enrichment
+## Step 2: YouTube API Enrichment ✅
 
 Fetch metadata for videos not already in our cache. This is the first step that hits an external API.
 
