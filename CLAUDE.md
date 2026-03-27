@@ -39,3 +39,12 @@ When the user asks for something to be documented, or when a significant decisio
 - Scope changes or pivots
 
 Always check the current highest ADR number in `docs/` before creating a new one to maintain sequential numbering.
+
+## Design
+
+All UI must follow `STYLEGUIDE.md` in the project root. Key rules:
+- Brutalist aesthetic: pure black bg, `#ff4d00` accent, no border-radius, no gradients
+- `font-black` for emphasis, default weight for body — no in-between weights
+- Dense grid layouts with 1px gaps for visual grids
+- Every image must be data (thumbnails, channel identity) — no decorative imagery
+- Read `STYLEGUIDE.md` before building any new page or component
