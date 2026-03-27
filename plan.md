@@ -4,7 +4,7 @@ Each step is independently testable. We verify it works before moving on.
 
 ---
 
-## Step 0: Project Scaffolding
+## Step 0: Project Scaffolding ✅
 
 Set up the Next.js project with all dependencies configured. No features yet — just a working skeleton we can deploy.
 
@@ -22,7 +22,7 @@ Set up the Next.js project with all dependencies configured. No features yet —
 
 ---
 
-## Step 1: Takeout Parser
+## Step 1: Takeout Parser ✅
 
 Pure function, zero external dependencies. Parse Google Takeout's `watch-history.json` into a clean array of watch events.
 
