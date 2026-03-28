@@ -47,3 +47,12 @@ For every key decision (architecture, library choice, schema design, algorithm a
 - Why the selected option is the best fit
 
 This helps the user reason about whether the choice is correct. If there is any doubt or ambiguity about the right path, do NOT assume — use AskUserQuestion to let the user guide the direction.
+
+## Design
+
+All UI must follow `STYLEGUIDE.md` in the project root. Key rules:
+- Brutalist aesthetic: pure black bg, `#ff4d00` accent, no border-radius, no gradients
+- `font-black` for emphasis, default weight for body — no in-between weights
+- Dense grid layouts with 1px gaps for visual grids
+- Every image must be data (thumbnails, channel identity) — no decorative imagery
+- Read `STYLEGUIDE.md` before building any new page or component
