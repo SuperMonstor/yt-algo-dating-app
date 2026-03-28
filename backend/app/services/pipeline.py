@@ -1,24 +1,24 @@
 """
 Background processing pipeline for takeout uploads.
 
-Orchestrates: parse → fetch → tag → profile → (matching when ready).
+Orchestrates: parse → fetch → embed → fingerprint → (matching when ready).
 Runs as a FastAPI background task. Updates processing_jobs with progress.
+
+LLM tagging is NOT part of this pipeline — it's done manually/offline.
+Fingerprint is generated from embeddings + clusters + raw data.
 """
 
 import json
 import sys
-import os
 from uuid import UUID
 from pathlib import Path
 
-# Add parent backend dir to path so we can import existing pipeline modules
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from parse_watch_history import parse_watch_history_from_string, classify_shorts
 from app.database import get_conn
 from app.services.fetcher import fetch_missing_videos
-from app.services.tagger import tag_missing_videos
-from app.services.profile import compute_profile
+from app.services.embedder import embed_missing_videos, compute_user_fingerprint
 from app.services.matching import run_matching
 
 
@@ -45,10 +45,11 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
     Stages:
         1. parsing    — extract video IDs from HTML
         2. fetching   — fetch missing video/channel metadata from YouTube API
-        3. tagging    — LLM-tag untagged videos
-        4. profiling  — compute topic_weights, embedding, etc.
-        5. matching   — run matching (placeholder for now)
-        6. done
+        3. embedding  — embed videos + assign to clusters (local, free)
+        4. profiling  — compute fingerprint from embeddings + raw data
+        5. done
+
+    LLM tagging is done separately (manual/offline).
     """
     try:
         # ── Stage 1: Parse ──────────────────────────────────
@@ -73,7 +74,6 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
         # ── Store watches ───────────────────────────────────
         async with get_conn() as conn:
             if is_reupload:
-                # Additive merge: update existing counts, add new entries
                 for vid, count in video_watches.items():
                     await conn.execute(
                         """
@@ -85,7 +85,6 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
                         user_id, vid, count,
                     )
             else:
-                # First upload: clear any stale data, insert fresh
                 await conn.execute(
                     "DELETE FROM user_video_watches WHERE user_id = $1", user_id
                 )
@@ -112,40 +111,54 @@ async def run_pipeline(user_id: UUID, job_id: UUID, html_content: str, is_reuplo
             "items_total": len(video_ids),
         })
 
-        # ── Stage 3: Tag untagged videos ────────────────────
-        await update_job(job_id, "tagging", {"stage": "tagging", "items_processed": 0, "items_total": len(video_ids)})
+        # ── Stage 3: Embed videos + assign clusters ─────────
+        await update_job(job_id, "embedding", {"stage": "embedding", "items_processed": 0, "items_total": len(video_ids)})
 
-        async def on_tag_progress(done, total):
-            await update_job(job_id, "tagging", {"stage": "tagging", "items_processed": done, "items_total": total})
+        async def on_embed_progress(done, total):
+            await update_job(job_id, "embedding", {"stage": "embedding", "items_processed": done, "items_total": total})
 
-        await tag_missing_videos(video_ids, on_progress=on_tag_progress)
+        await embed_missing_videos(video_ids, on_progress=on_embed_progress)
 
-        await update_job(job_id, "tagging", {
-            "stage": "tagging",
+        await update_job(job_id, "embedding", {
+            "stage": "embedding",
             "items_processed": len(video_ids),
             "items_total": len(video_ids),
         })
 
-        # ── Stage 4: Compute profile ───────────────────────
+        # ── Stage 4: Compute fingerprint ────────────────────
         await update_job(job_id, "profiling", {"stage": "profiling"})
 
-        profile_stats = await compute_profile(user_id)
+        fingerprint = await compute_user_fingerprint(user_id)
+
+        # Store fingerprint as JSON in user_profiles
+        if fingerprint:
+            async with get_conn() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO user_profiles (
+                        user_id, topic_weights, channel_weights,
+                        format_distribution, domain_weights,
+                        total_long_form_videos, computed_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, now())
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        topic_weights = $2, channel_weights = $3,
+                        format_distribution = $4, domain_weights = $5,
+                        total_long_form_videos = $6,
+                        computed_at = now()
+                    """,
+                    user_id,
+                    json.dumps(fingerprint.get("interest_dna", [])),
+                    json.dumps({c["name"]: c["watch_count"] for c in fingerprint.get("obsessed_channels", [])}),
+                    json.dumps(fingerprint.get("watch_personality", {})),
+                    json.dumps(fingerprint.get("archetype", {})),
+                    fingerprint.get("stats", {}).get("total_videos", 0),
+                )
 
         await update_job(job_id, "profiling", {
             "stage": "profiling",
             "items_processed": 1,
             "items_total": 1,
-        })
-
-        # ── Stage 5: Matching ──────────────────────────────
-        await update_job(job_id, "matching", {"stage": "matching"})
-
-        match_count = await run_matching(user_id)
-
-        await update_job(job_id, "matching", {
-            "stage": "matching",
-            "items_processed": match_count,
-            "items_total": match_count,
         })
 
         # ── Done ───────────────────────────────────────────
