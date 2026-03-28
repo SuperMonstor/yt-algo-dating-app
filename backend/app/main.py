@@ -19,6 +19,10 @@ DEV_USERS = {
     "nauman": UUID("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"),
     "tarun": UUID("cccccccc-dddd-eeee-ffff-aaaaaaaaaaaa"),
     "chaitanya": UUID("dddddddd-eeee-ffff-aaaa-bbbbbbbbbbbb"),
+    "deekshith": UUID("eeeeeeee-ffff-aaaa-bbbb-cccccccccccc"),
+    "srusti": UUID("ffffffff-aaaa-bbbb-cccc-dddddddddddd"),
+    "samuditha": UUID("11111111-2222-3333-4444-555555555555"),
+    "rachita": UUID("22222222-3333-4444-5555-666666666666"),
 }
 _current_dev_user = "dhruv"
 

@@ -1,30 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;900&display=swap');
+
 :root {
-  --bg: #FDFAF7;
-  --text: #1a1714;
-  --text-2: #4a4540;
-  --text-3: #8a8580;
-  --accent: #c75a3a;
-  --accent-soft: #f0ddd5;
-  --border: #e8e2dc;
-  --card: #ffffff;
+  --bg: #000000;
+  --surface: #18181b;
+  --surface-raised: #09090b;
+  --accent: #ff4d00;
+  --text: #ffffff;
+  --text-2: #d4d4d8;
+  --text-3: #a1a1aa;
+  --text-muted: #52525b;
+  --border: #27272a;
+  --border-pill: #3f3f46;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Geist Sans', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-h1, h2, h3 {
-  font-family: 'Space Grotesk', sans-serif;
-}
-
 ::selection {
   background: var(--accent);
-  color: white;
+  color: black;
 }

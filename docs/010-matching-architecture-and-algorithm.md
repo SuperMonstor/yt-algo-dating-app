@@ -164,6 +164,35 @@ Every match returns actionable context, not just a number:
 
 This implements the "ideas before people" principle from ADR-005 at the API level.
 
+### Format-Based Signal Weighting
+
+Not all content formats carry equal signal for matching. Music videos dominate many profiles (up to 47% of some users' content) but represent passive/background consumption rather than deliberate interest. We use a three-tier system to weight content by signal quality:
+
+**Tier 1 — Core matching (full weight)**
+Formats: podcast, interview, tutorial, documentary, explainer, review, vlog, news, reaction
+
+These represent deliberate content choices. Watching a 2-hour podcast or a 20-minute tutorial is an active signal of interest. All topic/channel/domain signals from these formats are included at full weight in matching.
+
+**Tier 2 — Cultural signal (reduced weight, niche only)**
+Formats: music video, live performance
+
+Music is excluded from core matching by default. However, niche music channels (below 50K subscribers) are included at reduced weight (0.3×) as a cultural signal. Two people who both watch the same 3K-subscriber indie artist share something real — but two people who both watch T-Series share nothing meaningful.
+
+Rationale: Music taste overlaps are extremely common at the mainstream level (everyone watches Bollywood hits) but extremely rare at the niche level (two people who both found the same obscure folk artist). The subscriber threshold filters the noise while preserving the signal.
+
+**Tier 3 — Excluded from matching**
+Formats: clip, compilation, highlights, comedy sketch, other, short
+
+These are algorithmically-driven consumption. Clips and compilations are served by YouTube's recommendation engine and don't represent a deliberate interest choice. They are still shown in the fingerprint (for self-awareness) but carry zero weight in matching.
+
+**Implementation:** During profile computation, each video's contribution to `topic_weights`, `channel_weights`, and `domain_weights` is multiplied by its tier weight (1.0, 0.3, or 0.0). The `embedding` is computed from tier-1 topics only. Format distribution is still computed from all content (for fingerprint display) but is not used in matching scores.
+
+**Impact on scoring formula:** The 6-signal scoring formula remains unchanged — the tiering happens upstream at the profile computation stage. This means:
+- `topic_overlap_score` naturally reflects deliberate interests (not music noise)
+- `channel_overlap_score` includes niche music channels but not mainstream ones
+- `embedding_cosine_sim` captures the user's interest identity without music dilution
+- Fingerprint display still shows the full picture (music included) — only matching is filtered
+
 ### Signal Tiers
 
 | Tier | Signal | Rationale |
@@ -173,10 +202,13 @@ This implements the "ideas before people" principle from ADR-005 at the API leve
 | A | Shared long-form channel with high engagement depth | Deliberate overlap |
 | A | Shared topic across different channels (IDF-weighted) | Same interest, different discovery path |
 | A | High embedding similarity (>0.85 cosine) | Deeply similar taste |
+| A | Shared niche music channel (<50K subs) | Cultural identity signal |
 | B | Domain distribution similarity | Abstract alignment |
 | B | Complementary depth (one deep, one exploring) | "Learn from each other" |
 | C | Shared mainstream channel (>1M subs) | Everyone watches these |
 | D | Format / behavioral similarity | Lifestyle tiebreaker |
+| — | Shared mainstream music channel | Excluded — noise |
+| — | Shared clips/compilations/highlights | Excluded — algorithmic consumption |
 
 **Minimum threshold:** 1 S-tier signal OR 2 A-tier signals to surface a match.
 
