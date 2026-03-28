@@ -1,0 +1,14 @@
+google-api-python-client
+youtube-transcript-api
+yt-dlp
+fastapi
+uvicorn[standard]
+asyncpg
+pydantic-settings
+python-multipart
+PyJWT
+cryptography
+anthropic
+aiohttp
+numpy
+sentence-transformers

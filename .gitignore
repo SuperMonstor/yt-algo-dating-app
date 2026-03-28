@@ -1,0 +1,35 @@
+# Data files (personal watch history, cache)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Tagging artifacts
+tag_generator*.py
+tagger_*.py
+tag_processor.py
+tag_results_*.json
+retag_results_*.json
+retag_chunk_*.json
+small_chunk_*.json
+tag_chunk_*.json
+tagging_batches.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+*.env
