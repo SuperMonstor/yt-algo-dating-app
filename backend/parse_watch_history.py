@@ -35,6 +35,14 @@ def _parse_timestamp(text: str):
         except ValueError:
             pass
 
+    # Format 1b: "Mar 26, 2026, 9:36:12 AM EDT" (US locale with tz abbreviation)
+    ts_match = re.search(r'(\w{3} \d+, \d{4}, \d+:\d+:\d+ [AP]M)\s+[A-Z]{2,5}', text)
+    if ts_match:
+        try:
+            return datetime.strptime(ts_match.group(1), "%b %d, %Y, %I:%M:%S %p")
+        except ValueError:
+            pass
+
     # Format 2: "31 Dec 2025, 13:18:15" (non-US locale, 24h)
     ts_match = re.search(r'(\d{1,2} \w{3} \d{4}, \d+:\d+:\d+)', text)
     if ts_match:
